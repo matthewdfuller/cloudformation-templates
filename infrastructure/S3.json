@@ -1,0 +1,447 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+
+	"Description" : "Shared S3 buckets across the account, not specific to a single project",
+
+	"Parameters" : {
+		"Owner" : {
+			"Type"				: "String",
+			"Default"			: "organization",
+			"Description"			: "Owner or service name. (For tagging and naming, use lowercase, no spaces, dashes ok.)",
+			"AllowedPattern"		: "[-a-z0-9]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		},
+
+		"Environment" : {
+			"Type"				: "String",
+			"Default"			: "stg",
+			"Description"			: "Environment name",
+			"AllowedValues"			: ["dev", "qet", "stg", "prd"],
+			"ConstraintDescription"		: "Must be one of dev, qet, stg, or prd"
+		},
+
+		"LoggingBucketName" : {
+			"Type"				: "String",
+			"Default"			: "logs-organization-stg",
+			"Description"			: "Name of the logs S3 bucket",
+			"AllowedPattern"		: "[-a-z0-9]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		},
+
+		"EnableCloudTrail" : {
+			"Type"				: "String",
+			"Default"			: "true",
+			"Description"			: "Whether CloudTrail should be enabled for this account and region",
+			"AllowedValues"			: ["true", "false"],
+			"ConstraintDescription"		: "Must be true or false."
+		},
+
+		"RootDomain" : {
+			"Type"				: "String",
+			"Default"			: "example.com",
+			"Description"			: "The root domain name for the account",
+			"AllowedPattern"		: "[-a-z0-9\\.]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		}
+	},
+
+	"Conditions" : {
+		"IsDev" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "dev" ]
+		},
+		"IsQet" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "qet" ]
+		},
+		"IsStg" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "stg" ]
+		},
+		"IsPrd" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "prd" ]
+		},
+
+		"EnableCloudTrail" : {
+			"Fn::Equals" : [ { "Ref" : "EnableCloudTrail" }, "true" ]
+		}
+	},
+
+	"Resources" : {
+		"LoggingS3Bucket" : {
+			"Type" : "AWS::S3::Bucket",
+			"Properties" : {
+				"AccessControl" : "LogDeliveryWrite",
+				"BucketName" 	: { "Ref" : "LoggingBucketName" }
+			},
+			"Metadata" : {
+				"Comment" : "Bucket for storing logs produced throughout AWS"
+			}
+		},
+
+		"LoggingS3BucketPolicy" : {
+			"Type" : "AWS::S3::BucketPolicy",
+			"Properties" : {
+				"Bucket" : {"Ref" : "LoggingS3Bucket"},
+				"PolicyDocument" : {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Sid": "AWSCloudTrailAclCheck",
+							"Effect": "Allow",
+							"Principal": {
+								"AWS": [
+									"arn:aws:iam::903692715234:root",
+									"arn:aws:iam::859597730677:root",
+									"arn:aws:iam::814480443879:root",
+									"arn:aws:iam::216624486486:root",
+									"arn:aws:iam::086441151436:root",
+									"arn:aws:iam::388731089494:root",
+									"arn:aws:iam::284668455005:root",
+									"arn:aws:iam::113285607260:root",
+									"arn:aws:iam::035351147821:root"
+								]
+							},
+							"Action": "s3:GetBucketAcl",
+							"Resource": { 
+								"Fn::Join" : [
+									"",
+									[
+										"arn:aws:s3:::",
+										{"Ref":"LoggingS3Bucket"}
+									]
+								]
+							}
+						},
+						{
+							"Sid": "AWSCloudTrailWrite",
+							"Effect": "Allow",
+							"Principal": {
+								"AWS": [
+									"arn:aws:iam::903692715234:root",
+									"arn:aws:iam::859597730677:root",
+									"arn:aws:iam::814480443879:root",
+									"arn:aws:iam::216624486486:root",
+									"arn:aws:iam::086441151436:root",
+									"arn:aws:iam::388731089494:root",
+									"arn:aws:iam::284668455005:root",
+									"arn:aws:iam::113285607260:root",
+									"arn:aws:iam::035351147821:root"
+								]
+							},
+							"Action": "s3:PutObject",
+							"Resource": {
+								"Fn::Join" : [
+									"",
+									[
+										"arn:aws:s3:::",
+										{"Ref":"LoggingS3Bucket"},
+										"/AWSLogs/",
+										{"Ref":"AWS::AccountId"},
+										"/*"
+									]
+								]
+							},
+							"Condition": {
+								"StringEquals": {
+									"s3:x-amz-acl": "bucket-owner-full-control"
+								}
+							}
+						},
+						{
+							"Sid": "LoggingS3BucketPreventDelete",
+							"Effect": "Deny",
+							"Principal": {
+								"AWS": [
+									"*"
+								]
+							},
+							"Action": [
+								"s3:DeleteBucket",
+								"s3:DeleteObject"
+							],
+							"Resource": [
+								{
+									"Fn::Join" : [
+										"",
+										[
+											"arn:aws:s3:::",
+											{"Ref":"LoggingS3Bucket"},
+											"/*"
+										]
+									]
+								},
+								{
+									"Fn::Join" : [
+										"",
+										[
+											"arn:aws:s3:::",
+											{"Ref":"LoggingS3Bucket"}
+										]
+									]
+								}
+							]
+						}
+					]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					}
+				]
+			},
+			"Metadata" : {
+				"Comment" : "This policy allows the AWS service from all AWS-owned accounts (the IDs above) to access the CloudTrail logs bucket."
+			}
+		},
+
+		"DeploymentsS3Bucket" : {
+			"Type" : "AWS::S3::Bucket",
+			"Properties" : {
+				"AccessControl" : "AuthenticatedRead",
+				"BucketName" 	: {
+							"Fn::Join": [
+								"-",
+								[
+									"deployments",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" }
+								]
+							]
+				},
+				"LoggingConfiguration" : {
+					"DestinationBucketName" : {"Ref" : "LoggingS3Bucket"},
+					"LogFilePrefix" : {
+								"Fn::Join": [
+									"",
+									[
+										"AWSLogs/",
+										{ "Ref" : "AWS::AccountId" },
+										"/S3/deployments-bucket-access/"
+									]
+								]
+					}
+				},
+				"VersioningConfiguration" : {
+					"Status" : "Enabled"
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					}
+				]
+			},
+			"Metadata" : {
+				"Comment" : "Bucket for storing deployment artifacts, CloudFormation templates, etc."
+			}
+		},
+
+		"DeploymentsS3BucketPolicy" : {
+			"Type" : "AWS::S3::BucketPolicy",
+			"Properties" : {
+				"Bucket" : { "Ref" : "DeploymentsS3Bucket" },
+				"PolicyDocument" : {
+					"Version": "2012-10-17",
+					"Id" : "PutObjectPolicy",
+					"Statement" : [
+						{
+							"Sid" : "DenyUnEncryptedObjectUploads",
+							"Effect" : "Deny",
+							"Principal" : "*",
+							"Action" : "s3:PutObject",
+							"Resource": [
+								{
+									"Fn::Join" : [
+										"",
+										[
+											"arn:aws:s3:::",
+											{ "Ref" : "DeploymentsS3Bucket" },
+											"/credentials/*"
+										]
+									]
+								}
+							],
+							"Condition" : {
+							"StringNotEquals":{
+									"s3:x-amz-server-side-encryption":"AES256"
+								}
+							}
+						}
+					]
+				}
+			}
+		},
+
+		"SamplePublicS3Bucket" : {
+			"Type" : "AWS::S3::Bucket",
+			"Properties" : {
+				"AccessControl" : "AuthenticatedRead",
+				"BucketName" 	: {
+							"Fn::Join": [
+								"-",
+								[
+									"sample-bucket",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+				},
+				"CorsConfiguration" : {
+					"CorsRules" : [
+						{
+							"AllowedHeaders" : [
+								"*"
+							],
+							"AllowedMethods" : [
+								"GET"
+							],
+							"AllowedOrigins" : [
+								"*"
+							],
+							"MaxAge" : "3000"
+						}
+					]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					}
+				]
+			},
+			"Metadata" : {
+				"Comment" : "Sample bucket with CORS headers"
+			}
+		},
+
+		"SampleCloudFrontDistribution" : {
+			"Type" : "AWS::CloudFront::Distribution",
+			"Properties" : {
+				"DistributionConfig" : {
+					"Aliases" : [
+						{
+							"Fn::Join": [
+								".",
+								[
+									"sample-cdn",
+									{ "Ref" : "RootDomain" }
+								]
+							]
+						}
+					],
+					"Comment" : "Sample CDN",
+					"DefaultCacheBehavior" : {
+						"AllowedMethods" : [ "HEAD", "GET" ],
+						"ForwardedValues" : {
+							"QueryString" : false,
+							"Headers" : [
+								"Origin"
+							]
+						},
+						"MinTTL" : "604800",
+						"TargetOriginId" : "sampleS3Origin",
+						"ViewerProtocolPolicy" : "allow-all"
+					},
+					"DefaultRootObject" : "index.html",
+					"Enabled" : true,
+					"Origins" : [
+						{
+							"DomainName" : {
+								"Fn::Join": [
+									"",
+									[
+										{"Ref":"SamplePublicS3Bucket"},
+										".s3.amazonaws.com"
+									]
+								]
+							},
+							"Id" : "sampleS3Origin",
+							"S3OriginConfig" : {
+								"OriginAccessIdentity" : ""
+							}
+						}
+					],
+					"ViewerCertificate" : { "CloudFrontDefaultCertificate" : "true" }
+				}
+			}
+		},
+
+		"CloudTrail" : {
+			"DependsOn" : ["LoggingS3BucketPolicy"],
+			"Type" : "AWS::CloudTrail::Trail",
+			"Condition" : "EnableCloudTrail",
+			"Properties" : {
+				"S3BucketName" : {"Ref":"LoggingS3Bucket"},
+				"IsLogging" : true,
+				"IncludeGlobalServiceEvents": true
+			}
+		}
+	},
+	"Outputs" : {
+		"TemplateURL" : {
+			"Description" 	: "Use this S3 path to update this stack.",
+			"Value"		: {
+				"Fn::Join" : [
+					"",
+					[
+						"https://s3.amazonaws.com/deployments-",
+						{ "Ref" : "Owner" },
+						"-",
+						{ "Ref" : "Environment" }
+						"/cloudformation-templates/infrastructure/",
+						{ "Ref" : "AWS::StackName" },
+						".json"
+					]
+				]
+			}
+		},
+		"LoggingS3Bucket" : {
+			"Description" 	: "Bucket for storing logs; pre-configured with AWS access",
+			"Value"		: {
+				"Fn::Join" : [
+					"",
+					[
+						"https://s3.amazonaws.com/",
+						{ "Ref" : "LoggingS3Bucket" }
+					]
+				]
+			}
+		},
+		"DeploymentsS3Bucket" : {
+			"Description" 	: "Bucket for storing deployment and infrastructure artifacts",
+			"Value"		: {
+				"Fn::Join" : [
+					"",
+					[
+						"https://s3.amazonaws.com/",
+						{ "Ref" : "DeploymentsS3Bucket" }
+					]
+				]
+			}
+		}
+	}
+}

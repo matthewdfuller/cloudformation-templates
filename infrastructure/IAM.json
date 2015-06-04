@@ -1,0 +1,674 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+
+	"Description" : "IAM groups and account-wide role configurations",
+
+	"Parameters" : {
+		"Owner" : {
+			"Type"				: "String",
+			"Default"			: "organization",
+			"Description"			: "Owner or service name. (For tagging and naming, use lowercase, no spaces, dashes ok.)",
+			"AllowedPattern"		: "[-a-z0-9]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		},
+
+		"Environment" : {
+			"Type"				: "String",
+			"Default"			: "stg",
+			"Description"			: "Environment name",
+			"AllowedValues"			: ["dev", "qet", "stg", "prd"],
+			"ConstraintDescription"		: "Must be one of dev, qet, stg, or prd"
+		},
+
+		"CreateConfigRole" : {
+			"Type"				: "String",
+			"Default"			: "true",
+			"Description"			: "Whether a role should be created for use with the AWS Config service",
+			"AllowedValues"			: ["true", "false"],
+			"ConstraintDescription"		: "Must be true or false."
+		},
+
+		"CreateCodeDeployRole" : {
+			"Type"				: "String",
+			"Default"			: "true",
+			"Description"			: "Whether a role should be created for use with AWS CodeDeploy",
+			"AllowedValues"			: ["true", "false"],
+			"ConstraintDescription"		: "Must be true or false."
+		},
+
+		"CreateCloudTrailRole" : {
+			"Type"				: "String",
+			"Default"			: "true",
+			"Description"			: "Whether a role should be created for use with AWS CloudTrail",
+			"AllowedValues"			: ["true", "false"],
+			"ConstraintDescription"		: "Must be true or false."
+		},
+
+		"LoggingBucketName" : {
+			"Type"				: "String",
+			"Default"			: "logs-organization-stg",
+			"Description"			: "Name of the logs S3 bucket",
+			"AllowedPattern"		: "[-a-z0-9]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		},
+
+		"CrossAccountNumberAndUser" : {
+			"Type"				: "String",
+			"Default"			: "1234567891011:root",
+			"Description"			: "Name of an account and user that can assume permissions within this account",
+			"AllowedPattern"		: "[:a-z0-9]*",
+			"ConstraintDescription"		: "Must be an account number : user name"
+		},
+	},
+
+	"Conditions" : {
+		"IsDev" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "dev" ]
+		},
+		"IsQet" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "qet" ]
+		},
+		"IsStg" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "stg" ]
+		},
+		"IsPrd" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "prd" ]
+		},
+
+		"CreateConfigRole" : {
+			"Fn::Equals" : [ { "Ref" : "CreateConfigRole" }, "true" ]
+		},
+		"CreateCodeDeployRole" : {
+			"Fn::Equals" : [ { "Ref" : "CreateCodeDeployRole" }, "true" ]
+		},
+		"CreateCloudTrailRole" : {
+			"Fn::Equals" : [ { "Ref" : "CreateCloudTrailRole" }, "true" ]
+		}
+	},
+
+	"Resources" : {
+		"AWSConfigRole" : {
+			"Type" : "AWS::IAM::Role",
+			"Condition" : "CreateConfigRole",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "config.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "AWSConfigPolicy",
+						"PolicyDocument" : {
+							"Statement": [
+								{
+									"Action": [
+										"appstream:Get*",
+										"autoscaling:Describe*",
+										"cloudformation:DescribeStacks",
+										"cloudformation:DescribeStackEvents",
+										"cloudformation:DescribeStackResource",
+										"cloudformation:DescribeStackResources",
+										"cloudformation:GetTemplate",
+										"cloudformation:List*",
+										"cloudfront:Get*",
+										"cloudfront:List*",
+										"cloudtrail:DescribeTrails",
+										"cloudtrail:GetTrailStatus",
+										"cloudwatch:Describe*",
+										"cloudwatch:Get*",
+										"cloudwatch:List*",
+										"directconnect:Describe*",
+										"dynamodb:GetItem",
+										"dynamodb:BatchGetItem",
+										"dynamodb:Query",
+										"dynamodb:Scan",
+										"dynamodb:DescribeTable",
+										"dynamodb:ListTables",
+										"ec2:Describe*",
+										"elasticache:Describe*",
+										"elasticbeanstalk:Check*",
+										"elasticbeanstalk:Describe*",
+										"elasticbeanstalk:List*",
+										"elasticbeanstalk:RequestEnvironmentInfo",
+										"elasticbeanstalk:RetrieveEnvironmentInfo",
+										"elasticloadbalancing:Describe*",
+										"elastictranscoder:Read*",
+										"elastictranscoder:List*",
+										"iam:List*",
+										"iam:Get*",
+										"kinesis:Describe*",
+										"kinesis:Get*",
+										"kinesis:List*",
+										"opsworks:Describe*",
+										"opsworks:Get*",
+										"route53:Get*",
+										"route53:List*",
+										"redshift:Describe*",
+										"redshift:ViewQueriesInConsole",
+										"rds:Describe*",
+										"rds:ListTagsForResource",
+										"s3:Get*",
+										"s3:List*",
+										"sdb:GetAttributes",
+										"sdb:List*",
+										"sdb:Select*",
+										"ses:Get*",
+										"ses:List*",
+										"sns:Get*",
+										"sns:List*",
+										"sqs:GetQueueAttributes",
+										"sqs:ListQueues",
+										"sqs:ReceiveMessage",
+										"storagegateway:List*",
+										"storagegateway:Describe*",
+										"trustedadvisor:Describe*"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"s3:PutObject*"
+									],
+									"Resource": [
+										{
+											"Fn::Join": [
+												"",
+												[
+													"arn:aws:s3:::",
+													{ "Ref" : "LoggingBucketName" },
+													"/AWSLogs/",
+													{ "Ref" : "AWS::AccountId" },
+													"/*"
+												]
+											]
+										}
+									],
+									"Condition": {
+										"StringLike": {
+											"s3:x-amz-acl": "bucket-owner-full-control"
+										}
+									}
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"s3:GetBucketAcl"
+									],
+									"Resource": {
+										"Fn::Join" : [
+											"",
+											[
+												"arn:aws:s3:::",
+												{ "Ref" : "LoggingBucketName" }
+											]
+										]
+									}
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"AWSCodeDeployRole" : {
+			"Type" : "AWS::IAM::Role",
+			"Condition" : "CreateCodeDeployRole",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": {
+									"Fn::Join": [
+										".",
+										[
+											"codedeploy",
+											{ "Ref" : "AWS::Region" },
+											"amazonaws.com"
+										]
+									]
+								}
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "AWSCodeDeployPolicy",
+						"PolicyDocument" : {
+							"Statement": [
+								{
+									"Action": [
+										"autoscaling:PutLifecycleHook",
+										"autoscaling:DeleteLifecycleHook",
+										"autoscaling:RecordLifecycleActionHeartbeat",
+										"autoscaling:CompleteLifecycleAction",
+										"autoscaling:DescribeAutoscalingGroups",
+										"autoscaling:PutInstanceInStandby",
+										"autoscaling:PutInstanceInService",
+										"ec2:Describe*"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
+								},
+								{
+									"Action": [
+										"s3:Get*",
+        									"s3:List*"
+									],
+									"Effect": "Allow",
+									"Resource": {
+										"Fn::Join": [
+											"-",
+											[
+												"arn:aws:s3:::deployments",
+												{ "Ref" : "Owner" },
+												{ "Ref" : "Environment" }
+												"/artifacts/projects/*"
+											]
+										]
+									}
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"AWSCloudTrailCloudWatchDeliveryRole" : {
+			"Type" : "AWS::IAM::Role",
+			"Condition" : "CreateCloudTrailRole",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "cloudtrail.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "AWSCloudTrailCloudWatchDeliveryPolicy",
+						"PolicyDocument" : {
+							"Statement": [
+								{
+									"Action": [
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Effect": "Allow",
+									"Resource": {
+										"Fn::Join": [
+											"",
+											[
+												"arn:aws:logs:",
+												"*",
+												":",
+												{ "Ref" : "AWS::AccountId" },
+												":log-group:CloudTrail/DefaultLogGroup:log-stream:",
+												{ "Ref" : "AWS::AccountId" },
+												"_CloudTrail_*"
+											]
+										]
+									}
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"AWSInstanceRole" : {
+			"Type": "AWS::IAM::Role",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"ec2.amazonaws.com"
+								]
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "AWSInstancePolicy",
+						"PolicyDocument" : {
+							"Statement": [
+								{
+									"Effect" : "Allow",
+									"Action" : [
+										"s3:Get*",
+		        							"s3:List*"
+									],
+									"Resource" : [
+		        							{
+											"Fn::Join": [
+												"",
+												[
+													"arn:aws:s3:::",
+													"aws-codedeploy-",
+													{ "Ref" : "AWS::Region" },
+													"/*"
+												]
+											]
+										}
+									]
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"AWSInstanceProfile" : {
+			"Type" : "AWS::IAM::InstanceProfile",
+			"Properties" : {
+				"Roles" : [
+					{ "Ref" : "AWSInstanceRole" }
+				]
+			}
+		},
+
+		"SampleCrossAccountRole" : {
+			"Type": "AWS::IAM::Role",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"AWS": {
+									"Fn::Join" : [
+										"",
+										[
+											"arn:aws:iam::",
+											{ "Ref" : "CrossAccountNumberAndUser" }
+										]
+									]
+								}
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "IAMCrossAccountPolicy",
+						"PolicyDocument" : {
+							"Statement" : [
+								{
+									"Effect" : "Allow",
+									"Action" : [
+										"*"
+									],
+									"Resource" : [
+										"*"
+									],
+									"Condition": {
+										"Bool": {
+											"aws:MultiFactorAuthPresent": "true"
+										}
+									}
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"SampleUser" : {
+			"Type" : "AWS::IAM::User",
+			"Properties" : {
+				"Policies" : [
+					{
+						"PolicyName" : "sample-user-policy",
+						"PolicyDocument" : {
+							"Version": "2012-10-17",
+							"Statement" : [
+								{
+									"Action": [
+										"s3:GetObject"
+									],
+									"Effect": "Allow",
+									"Resource": [
+										{
+											"Fn::Join": [
+												"",
+												[
+													"arn:aws:s3:::",
+													{ "Ref" : "LoggingBucketName" }
+													"/*"
+												]
+											]
+										}
+									]
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"SampleUserAccessKey" : {
+			"Type" : "AWS::IAM::AccessKey",
+			"Properties" : {
+				"UserName" : { "Ref" : "SampleUser" }
+			}
+		},
+
+		"JenkinsUser" : {
+			"Type" : "AWS::IAM::User",
+			"Properties" : {
+				"Policies" : [
+					{
+						"PolicyName" : "jenkins-policy",
+						"PolicyDocument" : {
+							"Version": "2012-10-17",
+							"Statement" : [
+								{
+									"Action": [
+										"s3:PutObject"
+									],
+									"Effect": "Allow",
+									"Resource": [
+										{
+											"Fn::Join" : [
+												"-",
+												[
+													"arn:aws:s3:::deployments",
+													{ "Ref" : "Owner" },
+													{ "Ref" : "Environment" },
+													"/artifacts/*"
+												]
+											]
+										},
+										{
+											"Fn::Join" : [
+												"-",
+												[
+													"arn:aws:s3:::deployments",
+													{ "Ref" : "Owner" },
+													{ "Ref" : "Environment" }
+													"/bootstraps/*"
+												]
+											]
+										},
+										{
+											"Fn::Join" : [
+												"-",
+												[
+													"arn:aws:s3:::deployments",
+													{ "Ref" : "Owner" },
+													{ "Ref" : "Environment" }
+													"/cloudformation-templates/*"
+												]
+											]
+										},
+										{
+											"Fn::Join" : [
+												"-",
+												[
+													"arn:aws:s3:::deployments",
+													{ "Ref" : "Owner" },
+													{ "Ref" : "Environment" }
+													"/scripts/*"
+												]
+											]
+										}
+									]
+								},
+								{
+									"Action": [
+										"lambda:GetFunction",
+								                "lambda:GetFunctionConfiguration",
+								                "lambda:ListFunctions",
+								                "lambda:UpdateFunctionCode"
+									],
+									"Effect": "Allow",
+									"Resource": [
+										{
+											"Fn::Join" : [
+												"",
+												[
+													"arn:aws:lambda:",
+													{ "Ref" : "AWS::Region" },
+													":",
+													{ "Ref" : "AWS::AccountId" },
+													":*"
+												]
+											]
+										}
+									]
+								},
+								{
+									"Effect" : "Allow",
+									"Action" : [
+										"codedeploy:RegisterApplicationRevision",
+										"codedeploy:GetApplicationRevision",
+										"codedeploy:ListApplicationRevisions",
+										"codedeploy:AbortDeployment",
+										"codedeploy:BatchGetDeployments",
+										"codedeploy:CreateDeployment",
+										"codedeploy:GetDeployment",
+										"codedeploy:ListDeployments",
+										"codedeploy:GetDeploymentConfig",
+										"codedeploy:ListDeploymentConfigs",
+										"codedeploy:GetDeploymentGroup",
+										"codedeploy:ListDeploymentGroups",
+										"codedeploy:UpdateDeploymentGroup",
+										"codedeploy:GetDeploymentInstance",
+										"codedeploy:ListDeploymentInstances",
+										"codedeploy:GetApplication",
+										"codedeploy:ListApplications",
+										"codedeploy:UpdateApplication"
+									],
+									"Resource" : [
+										{
+											"Fn::Join" : [
+												"",
+												[
+													"arn:aws:codedeploy:",
+													{ "Ref" : "AWS::Region" },
+													":",
+													{ "Ref" : "AWS::AccountId" },
+													":*"
+												]
+											]
+										}
+									]
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"JenkinsUserAccessKey" : {
+			"Type" : "AWS::IAM::AccessKey",
+			"Properties" : {
+				"UserName" : { "Ref" : "JenkinsUser" }
+			}
+		},
+
+		"ServiceAccountsGroup" : {
+			"Type": "AWS::IAM::Group"	
+		},
+
+		"AddUsersToServiceAccountsGroup" : {
+			"Type" : "AWS::IAM::UserToGroupAddition",
+			"Properties" : {
+				"GroupName" : { "Ref" : "ServiceAccountsGroup" },
+				"Users" : [
+					{ "Ref" : "JenkinsUser" }
+				]
+			}
+		}
+	},
+
+	"Outputs" : {
+		"TemplateURL" : {
+			"Description" 	: "Use this S3 path to update this stack.",
+			"Value"		: {
+					"Fn::Join" : [
+						"",
+						[
+							"https://s3.amazonaws.com/deployments-",
+							{ "Ref" : "Owner" },
+							"-",
+							{ "Ref" : "Environment" },
+							"/cloudformation-templates/infrastructure/",
+							{ "Ref" : "AWS::StackName" },
+							".json"
+						]
+					]
+			}
+		},
+
+		"SampleUserAccessKey" : {
+			"Description" 	: "The access key for the sample user",
+			"Value"		: { "Ref" : "SampleUserAccessKey" }
+		},
+
+		"SampleUserSecret" : {
+			"Description" 	: "The secret key for the sample user",
+			"Value"		: { "Fn::GetAtt" : [ "SampleUserAccessKey", "SecretAccessKey" ] }
+		},
+
+		"JenkinsUserAccessKey" : {
+			"Description" 	: "The access key for the Jenkins user",
+			"Value"		: { "Ref" : "JenkinsUserAccessKey" }
+		},
+
+		"JenkinsUserSecret" : {
+			"Description" 	: "The secret key for the Jenkins user",
+			"Value"		: { "Fn::GetAtt" : [ "JenkinsUserAccessKey", "SecretAccessKey" ] }
+		}
+	}
+}

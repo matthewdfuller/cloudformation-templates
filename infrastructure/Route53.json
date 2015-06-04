@@ -1,0 +1,108 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+
+	"Description" : "Hosted zones and common domain names, not specific to a single project",
+
+	"Parameters" : {
+		"Owner" : {
+			"Type"				: "String",
+			"Default"			: "organization",
+			"Description"			: "Owner or service name. (For tagging and naming, use lowercase, no spaces, dashes ok.)",
+			"AllowedPattern"		: "[-a-z0-9]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		},
+
+		"Environment" : {
+			"Type"				: "String",
+			"Default"			: "stg",
+			"Description"			: "Environment name",
+			"AllowedValues"			: ["dev", "qet", "stg", "prd"],
+			"ConstraintDescription"		: "Must be one of dev, qet, stg, or prd"
+		},
+
+		"RootDomain" : {
+			"Type"				: "String",
+			"Default"			: "example.com",
+			"Description"			: "The root domain name for the account",
+			"AllowedPattern"		: "[-a-z0-9\\.]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		}
+	},
+
+	"Conditions" : {
+		"IsDev" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "dev" ]
+		},
+		"IsQet" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "qet" ]
+		},
+		"IsStg" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "stg" ]
+		},
+		"IsPrd" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "prd" ]
+		},
+		"IsDefault" : {
+			"Fn::And" : [
+				{ "Fn::Equals" : [ { "Ref" : "AWS::Region" }, "us-east-1" ] },
+				{ "Fn::Equals" : [ { "Ref" : "Environment" }, "prd" ] }
+			]
+		}
+	},
+
+	"Resources" : {
+		"MainHostedZone" : {
+			"Type" : "AWS::Route53::HostedZone",
+			"Condition" : "IsDefault",
+			"Properties" : {
+				"Name" : { "Ref": "RootDomain" },
+				"HostedZoneConfig" : {
+					"Comment" : "The main root domain"
+				}
+			}
+		},
+
+		"SampleBlogRecord" : {
+			"Type" : "AWS::Route53::RecordSet",
+			"Condition" : "IsDefault",
+			"Properties" : {
+				"HostedZoneId" : { "Ref" : "MainHostedZone" },
+				"Comment": "A blog hosted by Squarespace",
+				"Name" : {
+					"Fn::Join" : [
+						".",
+						[
+							"blog",
+							{ "Ref" : "RootDomain" }
+						]
+					]
+				},
+				"Type" : "CNAME",
+				"TTL" : "3600",
+				"ResourceRecords" : [
+					"www.squarespace6.com"
+				]
+			}
+		}
+	},
+
+	"Outputs" : {
+		"TemplateURL" : {
+			"Description" 	: "Use this S3 path to update this stack.",
+			"Value"		: {
+				"Fn::Join" : [
+					"",
+					[
+						"https://s3.amazonaws.com/deployments-",
+						{ "Ref" : "Owner" },
+						"-",
+						{ "Ref" : "Environment" }
+						"/cloudformation-templates/infrastructure/",
+						{ "Ref" : "AWS::StackName" },
+						".json"
+					]
+				]
+			}
+		}
+	}
+}
