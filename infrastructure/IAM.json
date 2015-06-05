@@ -44,6 +44,14 @@
 			"ConstraintDescription"		: "Must be true or false."
 		},
 
+		"CreateECSRole" : {
+			"Type"				: "String",
+			"Default"			: "true",
+			"Description"			: "Whether a role should be created for use with AWS EC2 Container Service",
+			"AllowedValues"			: ["true", "false"],
+			"ConstraintDescription"		: "Must be true or false."
+		},
+
 		"LoggingBucketName" : {
 			"Type"				: "String",
 			"Default"			: "logs-organization-stg",
@@ -55,7 +63,7 @@
 		"CrossAccountNumberAndUser" : {
 			"Type"				: "String",
 			"Default"			: "1234567891011:root",
-			"Description"			: "Name of an account and user that can assume permissions within this account",
+			"Description"			: "Name of an account and user that can assume permissions within this account)",
 			"AllowedPattern"		: "[:a-z0-9]*",
 			"ConstraintDescription"		: "Must be an account number : user name"
 		},
@@ -280,6 +288,83 @@
 											]
 										]
 									}
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"AWSECSInstanceRole" : {
+			"Type": "AWS::IAM::Role",
+			"Condition" : "CreateECSRole",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "ec2.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "AWSECSInstancePolicy",
+						"PolicyDocument" : {
+							"Statement": [
+								{
+									"Action": [
+										"ecs:CreateCluster",
+										"ecs:DeregisterContainerInstance",
+										"ecs:DiscoverPollEndpoint",
+										"ecs:Poll",
+										"ecs:RegisterContainerInstance",
+										"ecs:Submit*"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"AWSECSServiceRole" : {
+			"Type": "AWS::IAM::Role",
+			"Condition" : "CreateECSRole",
+			"Properties" : {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "ecs.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Policies" : [
+					{
+						"PolicyName" : "AWSECSServicePolicy",
+						"PolicyDocument" : {
+							"Statement": [
+								{
+									"Action": [
+										"elasticloadbalancing:Describe*",
+									        "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+									        "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+									        "ec2:Describe*",
+									        "ec2:AuthorizeSecurityGroupIngress"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
 								}
 							]
 						}
