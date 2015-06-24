@@ -1,0 +1,1929 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+
+	"Description" : "Base infrastructure with VPC, subnets, NACLs, and security groups",
+
+	"Parameters" : {
+	    	"01VPCCIDRBlock" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "The main VPC CIDR block",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+
+		"02PublicZone1" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Public subnet in availability zone 1",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"03PublicZone2" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Public subnet in availability zone 2",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"04PublicZone3" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Public subnet in availability zone 3",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+
+		"05Private1Zone1" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Private subnet in availability zone 1",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"06Private1Zone2" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Private subnet in availability zone 2",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"07Private1Zone3" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Private subnet in availability zone 3",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+
+		"08Private2Zone1" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Private subnet in availability zone 1",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"09Private2Zone2" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Private subnet in availability zone 2",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"10Private2Zone3" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Private subnet in availability zone 3",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"11KnownIpBlock" : {
+			"Type"				: "String",
+			"Default"			: "10.0.0.0/16",
+			"Description"			: "Known IP address space to use for private security groups",
+			"AllowedPattern"		: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription"		: "CIDR block must be in IP format: x.x.x.x/x."
+		},
+		"Owner" : {
+			"Type"				: "String",
+			"Default"			: "organization",
+			"Description"			: "Owner or service name. (For tagging and naming, use lowercase, no spaces, dashes ok.)",
+			"AllowedPattern"		: "[-a-z0-9]*",
+			"ConstraintDescription"		: "Must be lowercase, no spaces, dashes ok."
+		},
+		"CreateSNSTopic" : {
+			"Type"				: "String",
+			"Default"			: "true",
+			"Description"			: "Whether an SNS topic should be created to provide alerts when the stack is updated",
+			"AllowedValues"			: ["true", "false"],
+			"ConstraintDescription"		: "Must be true or false."
+		},
+		"EmailUpdates" : {
+			"Type"				: "String",
+			"Default"			: "user@example.com",
+			"Description"			: "Email to send alerts when the stack is updated. Only used if CreateSNSTopic is set to true"
+		},
+		"Environment" : {
+			"Type"				: "String",
+			"Default"			: "stg",
+			"Description"			: "Environment name",
+			"AllowedValues"			: ["dev", "qet", "stg", "prd"],
+			"ConstraintDescription"		: "Must be one of dev, qet, stg, or prd"
+		}
+	},
+
+	"Conditions" : {
+		"IsDev" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "dev" ]
+		},
+		"IsQet" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "qet" ]
+		},
+		"IsStg" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "stg" ]
+		},
+		"IsPrd" : {
+			"Fn::Equals" : [ { "Ref" : "Environment" }, "prd" ]
+		},
+		"CreateSNSTopic" : {
+			"Fn::Equals" : [ { "Ref" : "CreateSNSTopic" }, "true" ]
+		}
+	},
+
+	"Resources" : {
+		"MainVPC" : {
+			"Type" : "AWS::EC2::VPC",
+			"Properties" : {
+				"CidrBlock"		: { "Ref" : "01VPCCIDRBlock" },
+				"EnableDnsSupport"	: "true",
+				"EnableDnsHostnames"	: "true",
+          			"InstanceTenancy"	: "default",
+          			"Tags" : [
+          				{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"vpc",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+          			]
+			}
+		},
+
+		"InternetGateway" : {
+			"Type" : "AWS::EC2::InternetGateway",
+			"Properties" : {
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"igw",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"GatewayAttachment" : {
+			"Type" : "AWS::EC2::VPCGatewayAttachment",
+			"Properties" : {
+				"VpcId"		    : { "Ref" : "MainVPC" },
+				"InternetGatewayId" : { "Ref" : "InternetGateway" }
+			}
+		},
+
+		"PublicZone1" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "02PublicZone1" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "0", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"public-zone-1",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"PublicZone2" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "03PublicZone2" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "1", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"public-zone-2",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"PublicZone3" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "04PublicZone3" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "2", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"public-zone-3",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private1Zone1" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "05Private1Zone1" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "0", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-1-zone-1",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private1Zone2" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "06Private1Zone2" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "1", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-1-zone-2",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private1Zone3" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "07Private1Zone3" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "2", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-1-zone-3",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private2Zone1" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "08Private2Zone1" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "0", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-2-zone-1",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private2Zone2" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "09Private2Zone2" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "1", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-2-zone-2",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private2Zone3" : {
+			"Type" : "AWS::EC2::Subnet",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"CidrBlock" : { "Ref" : "10Private2Zone3" },
+				"AvailabilityZone" : { 
+					"Fn::Select" : [ "2", { "Fn::GetAZs": "" } ]
+				},
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-2-zone-3",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"PublicRouteTable" : {
+			"Type" : "AWS::EC2::RouteTable",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"public-rtb",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private1RouteTable" : {
+			"Type" : "AWS::EC2::RouteTable",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-1-rtb",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private2RouteTable" : {
+			"Type" : "AWS::EC2::RouteTable",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-2-rtb",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"PublicDefaultRoute": {
+			"Type" : "AWS::EC2::Route",
+			"Properties" : {
+				"RouteTableId"		: { "Ref" : "PublicRouteTable" },
+				"DestinationCidrBlock"	: "0.0.0.0/0",
+				"GatewayId"		: { "Ref" : "InternetGateway" }
+			}
+		},
+
+		"Private1DefaultRoute": {
+			"Type" : "AWS::EC2::Route",
+			"Properties" : {
+				"RouteTableId"		: { "Ref" : "Private1RouteTable" },
+				"DestinationCidrBlock"	: "0.0.0.0/0",
+				"GatewayId"		: { "Ref" : "InternetGateway" }
+			}
+		},
+
+		"Private2DefaultRoute": {
+			"Type" : "AWS::EC2::Route",
+			"Properties" : {
+				"RouteTableId"		: { "Ref" : "Private2RouteTable" },
+				"DestinationCidrBlock"	: "0.0.0.0/0",
+				"GatewayId"		: { "Ref" : "InternetGateway" }
+			}
+		},
+
+		"PublicRouteTableAssociationZone1" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "PublicZone1" },
+          			"RouteTableId"	: { "Ref" : "PublicRouteTable" }
+			}
+		},
+
+		"PublicRouteTableAssociationZone2" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "PublicZone2" },
+          			"RouteTableId"	: { "Ref" : "PublicRouteTable" }
+			}
+		},
+
+		"PublicRouteTableAssociationZone3" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "PublicZone3" },
+          			"RouteTableId"	: { "Ref" : "PublicRouteTable" }
+			}
+		},
+
+		"Private1RouteTableAssociationZone1" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private1Zone1" },
+          			"RouteTableId"	: { "Ref" : "Private1RouteTable" }
+			}
+		},
+
+		"Private1RouteTableAssociationZone2" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private1Zone2" },
+          			"RouteTableId"	: { "Ref" : "Private1RouteTable" }
+			}
+		},
+
+		"Private1RouteTableAssociationZone3" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private1Zone3" },
+          			"RouteTableId"	: { "Ref" : "Private1RouteTable" }
+			}
+		},
+
+		"Private2RouteTableAssociationZone1" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private2Zone1" },
+          			"RouteTableId"	: { "Ref" : "Private2RouteTable" }
+			}
+		},
+
+		"Private2RouteTableAssociationZone2" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private2Zone2" },
+          			"RouteTableId"	: { "Ref" : "Private2RouteTable" }
+			}
+		},
+
+		"Private2RouteTableAssociationZone3" : {
+			"Type" : "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private2Zone3" },
+          			"RouteTableId"	: { "Ref" : "Private2RouteTable" }
+			}
+		},
+
+		"PublicNetworkAcl" : {
+			"Type" : "AWS::EC2::NetworkAcl",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"public-nacl",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"PublicAclEntryIn100" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "PublicNetworkAcl" },
+				"RuleNumber"	: "100",
+				"Protocol"	: "-1",
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows all access inbound to public subnet 1"
+			}
+		},
+
+		"PublicAclEntryOut100" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "PublicNetworkAcl" },
+				"RuleNumber"	: "100",
+				"Protocol"	: "-1",
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows all access outbound from public subnet 1"
+			}
+		},
+
+		"PublicNetworkAclAssociationZone1" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "PublicZone1" },
+				"NetworkAclId"	: { "Ref" : "PublicNetworkAcl" }
+			}
+		},
+
+		"PublicNetworkAclAssociationZone2" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "PublicZone2" },
+				"NetworkAclId"	: { "Ref" : "PublicNetworkAcl" }
+			}
+		},
+
+		"PublicNetworkAclAssociationZone3" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "PublicZone3" },
+				"NetworkAclId"	: { "Ref" : "PublicNetworkAcl" }
+			}
+		},
+
+		"Private1NetworkAcl" : {
+			"Type" : "AWS::EC2::NetworkAcl",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									"private-1-nacl",
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private1AclEntryIn100" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "100",
+				"Protocol"	: "-1",
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: { "Ref" : "01VPCCIDRBlock" }
+			},
+			"Metadata" : {
+				"Comment" : "Allows CIDR block access inbound to private subnet 1"
+			}
+		},
+
+		"Private1AclEntryIn200" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "200",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "22", "To" : "22" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external SSH access inbound to private subnet 1 (restricted further with security group)"
+			}
+		},
+
+		"Private1AclEntryIn300" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "300",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "1024", "To" : "65535" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external requests using Linux ephemeral ports"
+			}
+		},
+
+		"Private1AclEntryIn400" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "400",
+				"Protocol"	: "17",
+				"PortRange"	: { "From" : "1024", "To" : "65535" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external requests for UDP using Linux ephemeral ports"
+			}
+		},
+
+		"Private1AclEntryIn500" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "500",
+				"Protocol"	: "17",
+				"PortRange"	: { "From" : "123", "To" : "123" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external responses for UDP NTP"
+			}
+		},
+
+		"Private1AclEntryOut100" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "100",
+				"Protocol"	: "-1",
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: { "Ref" : "01VPCCIDRBlock" }
+			},
+			"Metadata" : {
+				"Comment" : "Allows all private subnet 1 traffic out to CIDR block"
+			}
+		},
+
+		"Private1AclEntryOut200" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "300",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "80", "To" : "80" },
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows web requests"
+			}
+		},
+
+		"Private1AclEntryOut300" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "400",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "443", "To" : "443" },
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows secure web requests"
+			}
+		},
+
+		"Private1AclEntryOut400" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" },
+				"RuleNumber"	: "500",
+				"Protocol"	: "17",
+				"PortRange"	: { "From" : "123", "To" : "123" },
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows UDP NTP requests out"
+			}
+		},
+
+		"Private1NetworkAclAssociationZone1" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private1Zone1" },
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" }
+			}
+		},
+
+		"Private1NetworkAclAssociationZone2" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private1Zone2" },
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" }
+			}
+		},
+
+		"Private1NetworkAclAssociationZone3" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private1Zone3" },
+				"NetworkAclId"	: { "Ref" : "Private1NetworkAcl" }
+			}
+		},
+
+		"Private2NetworkAcl" : {
+			"Type" : "AWS::EC2::NetworkAcl",
+			"Properties" : {
+				"VpcId" : { "Ref" : "MainVPC" },
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									"private2-nacl",
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"Private2AclEntryIn100" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "100",
+				"Protocol"	: "-1",
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: { "Ref" : "01VPCCIDRBlock" }
+			},
+			"Metadata" : {
+				"Comment" : "Allows CIDR block access inbound to private subnet 2"
+			}
+		},
+
+		"Private2AclEntryIn200" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "200",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "22", "To" : "22" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external SSH access inbound to private subnet 2"
+			}
+		},
+
+		"Private2AclEntryIn300" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "300",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "3306", "To" : "3306" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external MySQL access inbound to private subnet 2"
+			}
+		},
+
+		"Private2AclEntryIn400" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "400",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "32768", "To" : "61000" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external requests using Linux ephemeral ports"
+			}
+		},
+
+		"Private2AclEntryIn500" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "500",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "27017", "To" : "27017" },
+				"RuleAction"	: "allow",
+				"Egress"	: "false",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows external Mongo access inbound to private subnet 2"
+			}
+		},
+
+		"Private2AclEntryOut100" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "100",
+				"Protocol"	: "-1",
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: { "Ref" : "01VPCCIDRBlock" }
+			},
+			"Metadata" : {
+				"Comment" : "Allows all private subnet 2 traffic out to CIDR block"
+			}
+		},
+
+		"Private2AclEntryOut200" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "200",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "1024", "To" : "65535" },
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows ephemeral port response"
+			}
+		},
+
+		"Private2AclEntryOut300" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "300",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "80", "To" : "80" },
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows web requests"
+			}
+		},
+
+		"Private2AclEntryOut400" : {
+			"Type" : "AWS::EC2::NetworkAclEntry",
+			"Properties" : {
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" },
+				"RuleNumber"	: "400",
+				"Protocol"	: "6",
+				"PortRange"	: { "From" : "443", "To" : "443" },
+				"RuleAction"	: "allow",
+				"Egress"	: "true",
+				"CidrBlock"	: "0.0.0.0/0"
+			},
+			"Metadata" : {
+				"Comment" : "Allows secure web requests"
+			}
+		},
+
+		"Private2NetworkAclAssociationZone1" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private2Zone1" },
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" }
+			}
+		},
+
+		"Private2NetworkAclAssociationZone2" : {
+			"Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+			"Properties" : {
+				"SubnetId"	: { "Ref" : "Private2Zone2" },
+				"NetworkAclId"	: { "Ref" : "Private2NetworkAcl" }
+			}
+		},
+
+		"DhcpOptionsSet" : {
+			"Type" : "AWS::EC2::DHCPOptions",
+			"Properties" : {
+				"DomainNameServers" : [ "AmazonProvidedDNS" ],
+				"Tags" : [
+					{
+						"Key" 	: "Stack",
+						"Value"	: { "Ref" : "AWS::StackName" }
+					},
+					{
+				                "Key"	: "Owner",
+				                "Value"	: { "Ref" : "Owner" }
+					},
+					{
+				                "Key"	: "Env",
+				                "Value"	: { "Ref" : "Environment" }
+					},
+					{
+						"Key"	: "Name",
+						"Value"	: {
+							"Fn::Join": [
+								"-",
+								[
+									{ "Ref" : "Owner" },
+									{ "Ref" : "Environment" },
+									"dchp-options",
+									{ "Ref" : "AWS::Region" }
+								]
+							]
+						}
+					}
+				]
+			}
+		},
+
+		"DHCPOptionsSetAssociation" : {
+			"Type" : "AWS::EC2::VPCDHCPOptionsAssociation",
+			"Properties" : {
+				"VpcId" 	: { "Ref" : "MainVPC" },
+				"DhcpOptionsId" : { "Ref" : "DhcpOptionsSet" }
+			}
+		},
+
+		"LoadBalancerSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to ELBs for HTTP and HTTPS access",
+				"SecurityGroupIngress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "05Private1Zone1" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "05Private1Zone1" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "06Private1Zone2" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "06Private1Zone2" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "07Private1Zone3" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "07Private1Zone3" }
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "load-balancers"
+					}
+				]
+			}
+		},
+
+		"PrivateLoadBalancerSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to ELBs for HTTP and HTTPS access from known IPs",
+				"SecurityGroupIngress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "11KnownIpBlock"}
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "11KnownIpBlock"}
+					}
+				],
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "05Private1Zone1" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "05Private1Zone1" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "06Private1Zone2" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "06Private1Zone2" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": { "Ref" : "07Private1Zone3" }
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": { "Ref" : "07Private1Zone3" }
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "private-load-balancers"
+					}
+				]
+			}
+		},
+
+		"MySQLServerSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to MySQL databases for access to DBs",
+				"SecurityGroupIngress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3306",
+						"ToPort": "3306",
+						"CidrIp": { "Ref" : "11KnownIpBlock" }
+					}
+				],
+				"SecurityGroupEgress" : [
+					
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "mysql-servers"
+					}
+				]
+			}
+		},
+
+		"MySQLClientSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to MySQL clients for access to MySQL server",
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "3306",
+						"ToPort": "3306",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "mysql-clients"
+					}
+				]
+			}
+		},
+
+		"MySQLOutboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupEgress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "3306",
+				"ToPort": "3306",
+				"DestinationSecurityGroupId": {
+					"Fn::GetAtt": [
+						"MySQLServerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"MySQLClientSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"MySQLInboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "3306",
+				"ToPort": "3306",
+				"SourceSecurityGroupId": {
+					"Fn::GetAtt": [
+						"MySQLClientSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"MySQLServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"MongoServerSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to Mongo databases for access to DBs",
+				"SecurityGroupIngress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "27017",
+						"ToPort": "27017",
+						"CidrIp": { "Ref" : "11KnownIpBlock" }
+					}
+				],
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "5671",
+						"ToPort": "5671",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "mongo-servers"
+					}
+				]
+			}
+		},
+
+		"MongoClientSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to Mongo clients for access to Mongo server",
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "27017",
+						"ToPort": "27017",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "mongo-clients"
+					}
+				]
+			}
+		},
+
+		"MongoOutboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupEgress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "27017",
+				"ToPort": "27017",
+				"DestinationSecurityGroupId": {
+					"Fn::GetAtt": [
+						"MongoServerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"MongoClientSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"MongoOutboundSelfSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupEgress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "27017",
+				"ToPort": "27017",
+				"DestinationSecurityGroupId": {
+					"Fn::GetAtt": [
+						"MongoServerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"MongoServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"MongoInboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "27017",
+				"ToPort": "27017",
+				"SourceSecurityGroupId": {
+					"Fn::GetAtt": [
+						"MongoClientSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"MongoServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"MongoInboundSelfSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "27017",
+				"ToPort": "27017",
+				"SourceSecurityGroupId": {
+					"Fn::GetAtt": [
+						"MongoServerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"MongoServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"ElastiCacheServerSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to ElastiCache nodes",
+				"SecurityGroupIngress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "6379",
+						"ToPort": "6379",
+						"CidrIp": { "Ref" : "11KnownIpBlock" }
+					}
+				],
+				"SecurityGroupEgress" : [
+					
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "elasticache-servers"
+					}
+				]
+			}
+		},
+
+		"ElastiCacheClientSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to ElastiCache clients for access to ElastiCache nodes",
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "6379",
+						"ToPort": "6379",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "elasticache-clients"
+					}
+				]
+			}
+		},
+
+		"ElastiCacheInboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "6379",
+				"ToPort": "6379",
+				"SourceSecurityGroupId": {
+					"Fn::GetAtt": [
+						"ElastiCacheClientSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"ElastiCacheServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"WebServerSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to web servers for access from ELBs",
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "web-servers"
+					}
+				]
+			}
+		},
+
+		"WebServerOutboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupEgress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "80",
+				"ToPort": "80",
+				"DestinationSecurityGroupId": {
+					"Fn::GetAtt": [
+						"LoadBalancerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"WebServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"WebServerInboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "80",
+				"ToPort": "80",
+				"SourceSecurityGroupId": {
+					"Fn::GetAtt": [
+						"LoadBalancerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"WebServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"WebServerPrivateOutboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupEgress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "80",
+				"ToPort": "80",
+				"DestinationSecurityGroupId": {
+					"Fn::GetAtt": [
+						"PrivateLoadBalancerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"WebServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"WebServerPrivateInboundSecurityRule" : {
+			"Type" : "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {
+				"IpProtocol": "tcp",
+				"FromPort": "80",
+				"ToPort": "80",
+				"SourceSecurityGroupId": {
+					"Fn::GetAtt": [
+						"PrivateLoadBalancerSecurityGroup",
+						"GroupId"
+					]
+				},
+				"GroupId": {
+					"Fn::GetAtt": [
+						"WebServerSecurityGroup",
+						"GroupId"
+					]
+				}
+			}
+		},
+
+		"SSHSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to clients for SSH access",
+				"SecurityGroupIngress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "22",
+						"ToPort": "22",
+						"CidrIp": { "Ref" : "11KnownIpBlock" }
+					}
+				],
+				"SecurityGroupEgress" : [
+					
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "ssh"
+					}
+				]
+			}
+		},
+
+		"OutboundInternetSecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"VpcId": { "Ref" : "MainVPC" },
+				"GroupDescription" : "Applied to clients for internet access and NTP",
+				"SecurityGroupEgress" : [
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "80",
+						"ToPort": "80",
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
+						"IpProtocol": "tcp",
+						"FromPort": "443",
+						"ToPort": "443",
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
+						"IpProtocol": "udp",
+						"FromPort": "123",
+						"ToPort": "123",
+						"CidrIp": "0.0.0.0/0"
+					}
+				],
+				"Tags" : [
+					{
+						"Key" 	: "Name",
+						"Value"	: "outbound-internet"
+					}
+				]
+			}
+		},
+
+		"InfrastructureChangesSNSTopic" : {
+			"Type" : "AWS::SNS::Topic",
+			"Condition" : "CreateSNSTopic",
+			"Properties" : {
+				"DisplayName" : "Infrastructure Changes",
+				"TopicName" : "infrastructure-changes",
+				"Subscription" : [
+					{
+						"Endpoint" : { "Ref" : "EmailUpdates" },
+						"Protocol" : "email"
+					}
+				]
+			},
+			"Metadata" : {
+				"Comment" : "Optional notification of any changes to infrastructure"
+			}
+		}
+	},
+
+	"Outputs" : {
+		"TemplateURL" : {
+			"Description" 	: "Use this S3 path to update this stack.",
+			"Value"		: {
+				"Fn::Join" : [
+					"",
+					[
+						"https://s3.amazonaws.com/deployments-",
+						{ "Ref" : "Owner" },
+						"-",
+						{ "Ref" : "Environment" },
+						"-",
+						{ "Ref" : "AWS::Region" },
+						"/cloudformation-templates/infrastructure/",
+						{ "Ref" : "AWS::StackName" },
+						".json"
+					]
+				]
+			}
+		}
+	}
+}
